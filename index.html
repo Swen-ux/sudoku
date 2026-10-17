@@ -49,8 +49,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--display);
 body.has-bg{--a:var(--glass,72%);background:#000}
 body.has-bg .panel{padding:12px;background:color-mix(in srgb,var(--paper) var(--a),transparent);
   -webkit-backdrop-filter:blur(10px) saturate(1.2);backdrop-filter:blur(10px) saturate(1.2);box-shadow:0 6px 24px rgb(0 0 0/.25)}
-body.has-bg .board{background:color-mix(in srgb,var(--paper) var(--a),transparent);
-  -webkit-backdrop-filter:blur(1.5px);backdrop-filter:blur(1.5px);box-shadow:0 8px 30px rgb(0 0 0/.3)}
+body.has-bg .board{background:color-mix(in srgb,var(--paper) var(--a),transparent);box-shadow:0 8px 30px rgb(0 0 0/.3)}
 body.has-bg .cell.peer{background:color-mix(in srgb,var(--peer) 70%,transparent)}
 body.has-bg .cell.same{background:color-mix(in srgb,var(--same) 80%,transparent)}
 body.has-bg .pad button{background:color-mix(in srgb,var(--btn) 75%,transparent)}
@@ -177,7 +176,7 @@ header .stats{align-items:center}
 body.focus .app>.panel,body.focus .foot{display:none}
 .app{min-height:100%;box-sizing:border-box}
 body.focus .app{justify-content:center}
-.fbar{position:fixed;z-index:6;top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;
+.fbar{position:fixed;z-index:6;bottom:calc(env(safe-area-inset-bottom,0px) + 14px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;
   padding:5px 5px 5px 14px;border-radius:99px;background:color-mix(in srgb,var(--paper) 72%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
   font-family:var(--mono);font-size:.8rem;color:var(--ink);font-variant-numeric:tabular-nums;box-shadow:0 4px 18px rgb(0 0 0/.25);white-space:nowrap}
 .fbar button{font:500 .78rem var(--display);padding:6px 12px;border-radius:99px;border:none;background:var(--ink);color:var(--paper);cursor:pointer}
@@ -346,7 +345,7 @@ function showPicker(i){const pk=$('picker'),wrap=pk.parentElement;drawPicker();i
   if(S.puz[i]||S.val[i]===S.sol[i]){hidePicker();return}
   const wr=wrap.getBoundingClientRect(),cr=board.childNodes[i].getBoundingClientRect(),pw=pk.offsetWidth,ph=pk.offsetHeight;
   let left=cr.left-wr.left+cr.width/2-pw/2;left=Math.max(0,Math.min(wr.width-pw,left));
-  let top=cr.bottom-wr.top+6;if(cr.bottom+6+ph>innerHeight-8)top=cr.top-wr.top-ph-6;
+  let top=cr.bottom-wr.top+6;if(cr.bottom+6+ph>innerHeight-76)top=cr.top-wr.top-ph-6;
   pk.style.left=left+'px';pk.style.top=Math.max(-wr.top+8,top)+'px'}
 $('picker').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
   if(b.dataset.v){input(+b.dataset.v);if(!S.over&&S.sel>=0&&S.val[S.sel]===S.sol[S.sel])hidePicker();return}
