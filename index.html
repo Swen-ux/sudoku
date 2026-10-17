@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#16263a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sudoku">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}*,*::before,*::after{box-sizing:border-box}body{margin:0;font-size:14px}[hidden]{display:none!important}</style>
+<title>Sudoku Logbuch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: eine Spalte, Kopfzeile mit Status, Gitter als Kartenblatt, darunter Werkzeuge und Ziffernblock */
+:root{
+  --bg:#eef2f4; --paper:#fbfcfd; --ink:#16263a; --muted:#5d6e80;
+  --line:#c7d2dc; --line-strong:#16263a; --accent:#e0561f;
+  --sel:#d6e6f5; --peer:#e7eef5; --same:#bcd5ec; --err:#c8322b; --err-bg:#fbe3e1;
+  --given:#16263a; --user:#1f5fa8; --btn:#e3e9ee;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --mono:"DM Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1621; --paper:#152131; --ink:#e4ebf2; --muted:#8fa1b4;
+  --line:#2b3b50; --line-strong:#9db2c8; --accent:#ff7a3d;
+  --sel:#23405f; --peer:#1b2b3e; --same:#2c5480; --err:#ff6b62; --err-bg:#4a2024;
+  --given:#e4ebf2; --user:#7fb6f0; --btn:#1e2d40; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1621; --paper:#152131; --ink:#e4ebf2; --muted:#8fa1b4;
+  --line:#2b3b50; --line-strong:#9db2c8; --accent:#ff7a3d;
+  --sel:#23405f; --peer:#1b2b3e; --same:#2c5480; --err:#ff6b62; --err-bg:#4a2024;
+  --given:#e4ebf2; --user:#7fb6f0; --btn:#1e2d40; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--display);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  -webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+.app{position:relative;z-index:1;max-width:480px;margin:0 auto;padding-block:14px 24px;display:flex;flex-direction:column;gap:14px}
+.panel{display:flex;flex-direction:column;gap:12px;border-radius:16px;transition:background .4s,padding .4s}
+/* Fotohintergrund */
+.bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:var(--bg);pointer-events:none}
+.bg img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.04);transition:opacity 1.6s ease,transform 12s linear}
+.bg img.on{opacity:1;transform:scale(1.12)}
+body.has-bg{--a:var(--glass,72%);background:#000}
+body.has-bg .panel{padding:12px;background:color-mix(in srgb,var(--paper) var(--a),transparent);
+  -webkit-backdrop-filter:blur(10px) saturate(1.2);backdrop-filter:blur(10px) saturate(1.2);box-shadow:0 6px 24px rgb(0 0 0/.25)}
+body.has-bg .board{background:color-mix(in srgb,var(--paper) var(--a),transparent);
+  -webkit-backdrop-filter:blur(1.5px);backdrop-filter:blur(1.5px);box-shadow:0 8px 30px rgb(0 0 0/.3)}
+body.has-bg .cell.peer{background:color-mix(in srgb,var(--peer) 70%,transparent)}
+body.has-bg .cell.same{background:color-mix(in srgb,var(--same) 80%,transparent)}
+body.has-bg .pad button{background:color-mix(in srgb,var(--btn) 75%,transparent)}
+body.has-bg .foot{display:none}
+.glassrow{display:flex;align-items:center;gap:10px;padding:0 16px 14px;font-family:var(--mono);font-size:.8rem;color:#9fb0c2}
+.glassrow input{flex:1;accent-color:var(--accent)}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+h1{font-size:1.7rem;font-weight:700;margin:0;letter-spacing:-.02em}
+h1 span{color:var(--accent)}
+.stats{display:flex;gap:14px;font-family:var(--mono);font-size:.85rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.stats b{color:var(--ink);font-weight:500}
+.diff{display:flex;gap:6px;flex-wrap:wrap}
+.diff button{flex:1;min-width:0;font:500 .82rem var(--display);padding:8px 4px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer}
+.diff button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.board-wrap{position:relative}
+.board{display:grid;grid-template-columns:repeat(9,1fr);aspect-ratio:1;width:100%;max-width:100%;
+  background:var(--paper);border:2.5px solid var(--line-strong);border-radius:6px;overflow:hidden}
+.cell{position:relative;display:flex;align-items:center;justify-content:center;border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  font-family:var(--mono);font-size:clamp(1.1rem,6vw,1.8rem);cursor:pointer;color:var(--user);font-variant-numeric:tabular-nums;transition:background .12s}
+.cell:nth-child(9n){border-right:none}
+.cell:nth-child(9n+3),.cell:nth-child(9n+6){border-right:2px solid var(--line-strong)}
+.cell:nth-child(n+19):nth-child(-n+27),.cell:nth-child(n+46):nth-child(-n+54){border-bottom:2px solid var(--line-strong)}
+.cell:nth-child(n+73){border-bottom:none}
+.cell.given{color:var(--given);font-weight:500}
+.cell.peer{background:var(--peer)}
+.cell.same{background:var(--same)}
+.cell.sel{background:var(--sel);box-shadow:inset 0 0 0 2px var(--user)}
+.cell.err{color:var(--err);background:var(--err-bg)}
+.cell.pop{animation:pop .25s ease}
+@keyframes pop{50%{transform:scale(1.18)}}
+.notes{position:absolute;inset:2px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);font-size:clamp(.5rem,2.2vw,.72rem);color:var(--muted)}
+.notes span{display:flex;align-items:center;justify-content:center}
+.notes span.hl{color:var(--user);font-weight:500}
+.tools{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.tool{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border:none;background:transparent;color:var(--ink);font:500 .75rem var(--display);cursor:pointer;border-radius:10px}
+.tool svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.tool.on{color:var(--accent)}
+.tool .badge{font-family:var(--mono);font-size:.65rem;padding:1px 6px;border-radius:999px;background:var(--btn)}
+.tool.on .badge{background:var(--accent);color:var(--paper)}
+.pad{display:grid;grid-template-columns:repeat(9,1fr);gap:5px}
+.pad button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 0 6px;border:none;border-radius:10px;background:var(--btn);color:var(--user);font:500 clamp(1.2rem,5.5vw,1.6rem) var(--mono);cursor:pointer;min-width:0}
+.pad button small{font-size:.6rem;color:var(--muted)}
+.pad button.done{opacity:.3;pointer-events:none}
+.pad.notemode button{color:var(--muted)}
+button:focus-visible,.cell:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:active{transform:scale(.96)}
+.overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;
+  background:color-mix(in srgb,var(--paper) 92%,transparent);border-radius:6px;padding:20px}
+.overlay h2{margin:0;font-size:2rem;letter-spacing:-.02em}
+.overlay p{margin:0;color:var(--muted);font-family:var(--mono);font-size:.9rem}
+.primary{font:700 1rem var(--display);padding:12px 26px;border:none;border-radius:999px;background:var(--accent);color:#fff;cursor:pointer}
+.confirm{display:flex;gap:8px;justify-content:center}
+.ghost{font:500 1rem var(--display);padding:12px 22px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--ink);cursor:pointer}
+.show{position:fixed;inset:0;z-index:50;background:#05090f;display:flex;flex-direction:column;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);color:#e9eef4}
+.show-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px 16px;font-family:var(--mono);font-size:.8rem}
+.show-bar .grp{display:flex;gap:6px;flex-wrap:wrap}
+.sbtn{font:500 .85rem var(--display);padding:8px 14px;border-radius:999px;border:1px solid #33465c;background:#111c29;color:#e9eef4;cursor:pointer}
+.sbtn.warn{border-color:#7a3530;color:#ff9a90}
+.stage{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:hidden;touch-action:pan-y}
+.stage img{position:absolute;max-width:100%;max-height:100%;object-fit:contain;opacity:0;transition:opacity .8s ease}
+.stage img.on{opacity:1}
+.stage .nav{position:absolute;top:0;bottom:0;width:30%;border:none;background:transparent;cursor:pointer;color:transparent}
+.stage .prev{left:0}.stage .next{right:0}
+.empty{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:24px;max-width:340px}
+.empty p{margin:0;color:#9fb0c2;line-height:1.5}
+.dots{display:flex;justify-content:center;gap:6px;padding:12px 16px 16px;flex-wrap:wrap}
+.dots i{width:7px;height:7px;border-radius:50%;background:#33465c}
+.dots i.on{background:var(--accent)}
+.win-photo{width:100%;max-width:260px;aspect-ratio:4/3;border-radius:8px;overflow:hidden;position:relative;background:var(--btn)}
+.win-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity .8s}
+.win-photo img.on{opacity:1}
+.foot{font-family:var(--mono);font-size:.72rem;color:var(--muted);text-align:center}
+@media (prefers-reduced-motion:reduce){.cell.pop{animation:none}*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="bg" id="bg" aria-hidden="true"></div>
+<div class="app">
+  <div class="panel">
+  <header>
+    <h1>Sudoku<span>.</span></h1>
+    <div class="stats"><span>Fehler <b id="mist">0/3</b></span><span><b id="time">00:00</b></span></div>
+  </header>
+  <div class="diff" role="group" aria-label="Schwierigkeit">
+    <button data-d="leicht">Leicht</button>
+    <button data-d="mittel">Mittel</button>
+    <button data-d="schwer">Schwer</button>
+    <button data-d="experte">Experte</button>
+  </div>
+  </div>
+  <div class="board-wrap">
+    <div class="board" id="board" role="grid" aria-label="Sudoku-Gitter"></div>
+    <div class="overlay" id="overlay" hidden></div>
+  </div>
+  <div class="panel">
+  <div class="tools">
+    <button class="tool" id="undo"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>Rückgängig</button>
+    <button class="tool" id="erase"><svg viewBox="0 0 24 24"><path d="M20 20H8l-5-5 10-10 8 8-7 7"/><path d="m6 12 6 6"/></svg>Löschen</button>
+    <button class="tool" id="notes"><svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg><span class="badge" id="noteBadge">AUS</span></button>
+    <button class="tool" id="hint"><svg viewBox="0 0 24 24"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V16h8v-1.3A7 7 0 0 0 12 2Z"/></svg>Tipp <span class="badge" id="hintBadge">3</span></button>
+    <button class="tool" id="photos"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.8"/><path d="m21 16-5-5-9 8"/></svg>Fotos <span class="badge" id="photoBadge">0</span></button>
+  </div>
+  <div class="pad" id="pad"></div>
+  </div>
+  <p class="foot">Tastatur: Pfeile, 1–9, Entf, N für Notizen</p>
+</div>
+
+<div class="show" id="show" hidden role="dialog" aria-label="Diashow">
+  <div class="show-bar">
+    <span id="showCount">0 Fotos</span>
+    <div class="grp">
+      <button class="sbtn" id="addPhotos">+ Fotos</button>
+      <button class="sbtn" id="playBtn">Pause</button>
+      <button class="sbtn warn" id="delPhoto">Entfernen</button>
+      <button class="sbtn" id="closeShow">Schließen</button>
+    </div>
+  </div>
+  <div class="stage" id="stage"></div>
+  <div class="dots" id="dots"></div>
+  <label class="glassrow" for="glass">Spielfeld durchsichtig <input type="range" id="glass" min="35" max="95" step="5" value="70"> deckend</label>
+</div>
+<input type="file" id="fileIn" accept="image/*" multiple hidden>
+
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const CLUES={leicht:40,mittel:33,schwer:28,experte:24};
+let S; // state
+let timerId;
+
+// ---------- Generator ----------
+const peersOf=[...Array(81)].map((_,i)=>{const r=i/9|0,c=i%9,br=r-r%3,bc=c-c%3,s=new Set();
+  for(let k=0;k<9;k++){s.add(r*9+k);s.add(k*9+c);s.add((br+(k/3|0))*9+bc+k%3)}s.delete(i);return[...s]});
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};
+const ok=(g,i,v)=>peersOf[i].every(p=>g[p]!==v);
+function fill(g){const i=g.indexOf(0);if(i<0)return true;
+  for(const v of shuffle([1,2,3,4,5,6,7,8,9]))if(ok(g,i,v)){g[i]=v;if(fill(g))return true}g[i]=0;return false}
+function count(g,lim=2){let best=-1,bc=10;
+  for(let i=0;i<81;i++)if(!g[i]){let n=0;for(let v=1;v<=9;v++)if(ok(g,i,v))n++;if(n<bc){bc=n;best=i;if(!n)return 0}}
+  if(best<0)return 1;let t=0;
+  for(let v=1;v<=9&&t<lim;v++)if(ok(g,best,v)){g[best]=v;t+=count(g,lim-t);g[best]=0}return t}
+function generate(d){const sol=Array(81).fill(0);fill(sol);const puz=sol.slice();let filled=81;
+  for(const i of shuffle([...Array(81).keys()])){if(filled<=CLUES[d])break;const b=puz[i];puz[i]=0;
+    if(count(puz.slice())!==1)puz[i]=b;else filled--}
+  return{puz,sol}}
+
+// ---------- Speichern ----------
+const save=()=>{try{localStorage.setItem('sudoku-v1',JSON.stringify(S))}catch(e){}};
+const load=()=>{try{return JSON.parse(localStorage.getItem('sudoku-v1'))}catch(e){return null}};
+
+function newGame(d){const{puz,sol}=generate(d);
+  S={d,puz,sol,val:puz.slice(),notes:Array.from({length:81},()=>[]),sel:-1,mist:0,hints:3,time:0,hist:[],noteMode:false,over:null};
+  start()}
+function start(){clearInterval(timerId);timerId=setInterval(()=>{if(!S.over&&!document.hidden){S.time++;$('time').textContent=fmt(S.time);if(S.time%5===0)save()}},1000);
+  $('overlay').hidden=true;render();save()}
+const fmt=t=>String(t/60|0).padStart(2,'0')+':'+String(t%60).padStart(2,'0');
+
+// ---------- Render ----------
+const board=$('board'),pad=$('pad');
+for(let i=0;i<81;i++){const c=document.createElement('div');c.className='cell';c.role='gridcell';c.tabIndex=-1;c.onclick=()=>select(i);board.appendChild(c)}
+for(let v=1;v<=9;v++){const b=document.createElement('button');b.innerHTML=v+'<small></small>';b.setAttribute('aria-label','Ziffer '+v);b.onclick=()=>input(v);pad.appendChild(b)}
+
+function render(){const sv=S.sel>=0?S.val[S.sel]:0;const pr=S.sel>=0?new Set(peersOf[S.sel]):new Set();
+  board.childNodes.forEach((el,i)=>{const v=S.val[i];
+    el.className='cell'+(S.puz[i]?' given':'')+(pr.has(i)?' peer':'')+(sv&&v===sv?' same':'')+(i===S.sel?' sel':'')+(v&&!S.puz[i]&&v!==S.sol[i]?' err':'');
+    if(v){el.textContent=v}else if(S.notes[i].length){el.innerHTML='<div class="notes">'+[1,2,3,4,5,6,7,8,9].map(n=>`<span class="${n===sv?'hl':''}">${S.notes[i].includes(n)?n:''}</span>`).join('')+'</div>'}else el.textContent='';
+    el.setAttribute('aria-label',`Zeile ${(i/9|0)+1}, Spalte ${i%9+1}: ${v||'leer'}`)});
+  const cnt=Array(10).fill(0);S.val.forEach((v,i)=>{if(v&&v===S.sol[i])cnt[v]++});
+  pad.childNodes.forEach((b,k)=>{b.querySelector('small').textContent=9-cnt[k+1]||'';b.classList.toggle('done',cnt[k+1]===9)});
+  pad.classList.toggle('notemode',S.noteMode);
+  $('notes').classList.toggle('on',S.noteMode);$('noteBadge').textContent=S.noteMode?'AN':'AUS';
+  $('hintBadge').textContent=S.hints;$('mist').textContent=S.mist+'/3';$('time').textContent=fmt(S.time);
+  document.querySelectorAll('.diff button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.d===S.d))}
+
+function select(i){if(S.over)return;S.sel=i;render()}
+function push(){S.hist.push({val:S.val.slice(),notes:S.notes.map(n=>n.slice())});if(S.hist.length>200)S.hist.shift()}
+function pop(i){const el=board.childNodes[i];el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop')}
+
+function input(v){const i=S.sel;if(S.over||i<0||S.puz[i])return;if(S.val[i]===S.sol[i])return;
+  push();
+  if(S.noteMode){S.val[i]=0;const n=S.notes[i];const k=n.indexOf(v);k<0?n.push(v):n.splice(k,1)}
+  else{if(S.val[i]===v){S.val[i]=0}else{S.val[i]=v;S.notes[i]=[];
+      if(v!==S.sol[i]){S.mist++;if(S.mist>=3){S.over='lost'}}
+      else{peersOf[i].forEach(p=>{const n=S.notes[p],k=n.indexOf(v);if(k>=0)n.splice(k,1)});pop(i);
+        if(S.val.every((x,j)=>x===S.sol[j]))S.over='won'}}}
+  render();save();if(S.over)endScreen()}
+function erase(){const i=S.sel;if(S.over||i<0||S.puz[i]||S.val[i]===S.sol[i])return;push();S.val[i]=0;S.notes[i]=[];render();save()}
+function undo(){if(S.over||!S.hist.length)return;const h=S.hist.pop();S.val=h.val;S.notes=h.notes;render();save()}
+function hint(){if(S.over||!S.hints)return;let i=S.sel;
+  if(i<0||S.val[i]===S.sol[i]){const open=[...Array(81).keys()].filter(j=>S.val[j]!==S.sol[j]);if(!open.length)return;i=open[Math.random()*open.length|0]}
+  push();S.hints--;S.val[i]=S.sol[i];S.notes[i]=[];peersOf[i].forEach(p=>{const n=S.notes[p],k=n.indexOf(S.sol[i]);if(k>=0)n.splice(k,1)});
+  S.sel=i;pop(i);if(S.val.every((x,j)=>x===S.sol[j]))S.over='won';render();save();if(S.over)endScreen()}
+
+function endScreen(){const o=$('overlay');const won=S.over==='won';
+  const ph=won&&photos.length?`<div class="win-photo" id="winPhoto">${shuffle(photos.slice()).slice(0,8).map((p,k)=>`<img src="${p.url}" alt=""${k?'':' class="on"'}>`).join('')}</div>`:'';
+  o.innerHTML=won?`${ph}<h2>Gelöst!</h2><p>${S.d[0].toUpperCase()+S.d.slice(1)} · ${fmt(S.time)} · ${S.mist} Fehler</p><button class="primary" id="again">Neues Spiel</button>`
+    :`<h2>Drei Fehler</h2><p>Das Spiel ist vorbei.</p><div class="confirm"><button class="primary" id="again">Neues Spiel</button><button class="ghost" id="retry">Nochmal versuchen</button></div>`;
+  o.hidden=false;$('again').onclick=()=>newGame(S.d);
+  clearInterval(winTimer);const wp=$('winPhoto');
+  if(wp&&wp.children.length>1){let k=0;winTimer=setInterval(()=>{if(!wp.isConnected){clearInterval(winTimer);return}
+    wp.children[k].classList.remove('on');k=(k+1)%wp.children.length;wp.children[k].classList.add('on')},3000)}
+  const r=$('retry');if(r)r.onclick=()=>{S.val=S.puz.slice();S.notes=S.notes.map(()=>[]);S.mist=0;S.time=0;S.hist=[];S.over=null;S.sel=-1;start()}}
+
+function askNew(d){if(S.over||S.val.every((v,i)=>v===S.puz[i])){newGame(d);return}
+  const o=$('overlay');o.innerHTML=`<h2>Neues Spiel?</h2><p>Der aktuelle Fortschritt geht verloren.</p><div class="confirm"><button class="primary" id="yes">${d[0].toUpperCase()+d.slice(1)} starten</button><button class="ghost" id="no">Weiterspielen</button></div>`;
+  o.hidden=false;$('yes').onclick=()=>newGame(d);$('no').onclick=()=>{o.hidden=true}}
+
+document.querySelectorAll('.diff button').forEach(b=>b.onclick=()=>askNew(b.dataset.d));
+$('undo').onclick=undo;$('erase').onclick=erase;$('hint').onclick=hint;
+$('notes').onclick=()=>{S.noteMode=!S.noteMode;render();save()};
+// ---------- Fotos (nur lokal im Browser, IndexedDB) ----------
+let photos=[],idx=0,playing=true,showTimer,winTimer,dbP=null,delArm=false;
+function db(){if(dbP)return dbP;dbP=new Promise((res,rej)=>{try{const r=indexedDB.open('sudoku-fotos',1);
+  r.onupgradeneeded=()=>r.result.createObjectStore('pics',{keyPath:'id',autoIncrement:true});
+  r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)}catch(e){rej(e)}});return dbP}
+async function tx(mode,fn){const d=await db();return new Promise((res,rej)=>{const t=d.transaction('pics',mode);const out=fn(t.objectStore('pics'));
+  t.oncomplete=()=>res(out&&out.result);t.onerror=()=>rej(t.error)})}
+async function loadPhotos(){try{const all=await tx('readonly',s=>s.getAll());photos.forEach(p=>URL.revokeObjectURL(p.url));
+  photos=(all||[]).map(r=>({id:r.id,url:URL.createObjectURL(r.blob)}))}catch(e){photos=[]}updateBadge()}
+function updateBadge(){$('photoBadge').textContent=photos.length;renderBg()}
+// Hintergrund-Diashow
+let bgTimer,bgIdx=0;
+function renderBg(){const bg=$('bg');clearInterval(bgTimer);
+  document.body.classList.toggle('has-bg',photos.length>0);
+  if(!photos.length){bg.innerHTML='';return}
+  bgIdx=Math.floor(Math.random()*photos.length);
+  bg.innerHTML=photos.map((p,k)=>`<img src="${p.url}" alt="">`).join('');
+  const imgs=bg.children;requestAnimationFrame(()=>imgs[bgIdx]&&imgs[bgIdx].classList.add('on'));
+  if(photos.length>1)bgTimer=setInterval(()=>{if(document.hidden)return;imgs[bgIdx].classList.remove('on');
+    bgIdx=(bgIdx+1)%imgs.length;imgs[bgIdx].classList.add('on')},10000)}
+function setGlass(v){document.body.style.setProperty('--glass',v+'%');$('glass').value=v;try{localStorage.setItem('sudoku-glass',v)}catch(e){}}
+$('glass').oninput=e=>setGlass(e.target.value);
+try{const g=localStorage.getItem('sudoku-glass');if(g)setGlass(g)}catch(e){}
+function shrink(file){return new Promise(res=>{const u=URL.createObjectURL(file),im=new Image();
+  im.onload=()=>{const m=1600,sc=Math.min(1,m/Math.max(im.width,im.height)),cv=document.createElement('canvas');
+    cv.width=Math.round(im.width*sc);cv.height=Math.round(im.height*sc);cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);
+    URL.revokeObjectURL(u);cv.toBlob(b=>res(b||file),'image/jpeg',.85)};
+  im.onerror=()=>{URL.revokeObjectURL(u);res(null)};im.src=u})}
+$('fileIn').onchange=async e=>{const files=[...e.target.files];e.target.value='';$('showCount').textContent='Fotos werden geladen …';
+  for(const f of files){const b=await shrink(f);if(!b)continue;
+    try{const id=await tx('readwrite',s=>s.add({blob:b,added:Date.now()}));photos.push({id,url:URL.createObjectURL(b)})}
+    catch(err){photos.push({id:'tmp'+Math.random(),url:URL.createObjectURL(b)})}}
+  updateBadge();idx=Math.max(0,photos.length-files.length);drawShow()};
+
+function openShow(){$('show').hidden=false;idx=Math.min(idx,Math.max(0,photos.length-1));drawShow()}
+function closeShow(){$('show').hidden=true;clearInterval(showTimer);disarm()}
+function disarm(){delArm=false;$('delPhoto').textContent='Entfernen'}
+function drawShow(){const st=$('stage');disarm();
+  $('showCount').textContent=photos.length?`${idx+1} / ${photos.length}`:'Noch keine Fotos';
+  $('delPhoto').hidden=$('playBtn').hidden=!photos.length;
+  if(!photos.length){st.innerHTML='<div class="empty"><p>Füge eigene Fotos hinzu. Sie bleiben nur in diesem Browser auf deinem Gerät gespeichert und werden nicht hochgeladen.</p><button class="primary" id="emptyAdd">Fotos auswählen</button><p>Nach jedem gelösten Rätsel erscheinen sie auch im Gewinnbild.</p></div>';
+    $('emptyAdd').onclick=()=>$('fileIn').click();$('dots').innerHTML='';clearInterval(showTimer);return}
+  st.innerHTML=photos.map((p,k)=>`<img src="${p.url}" alt="Foto ${k+1}"${k===idx?' class="on"':''}>`).join('')+'<button class="nav prev" aria-label="Vorheriges Foto">‹</button><button class="nav next" aria-label="Nächstes Foto">›</button>';
+  st.querySelector('.prev').onclick=()=>{if(!swiped)go(-1)};st.querySelector('.next').onclick=()=>{if(!swiped)go(1)};
+  $('dots').innerHTML=photos.length<=30?photos.map((_,k)=>`<i${k===idx?' class="on"':''}></i>`).join(''):'';
+  $('playBtn').textContent=playing?'Pause':'Abspielen';restartTimer()}
+function go(d){if(!photos.length)return;const st=$('stage'),imgs=st.querySelectorAll('img'),dots=$('dots').children;
+  imgs[idx]&&imgs[idx].classList.remove('on');dots[idx]&&dots[idx].classList.remove('on');
+  idx=(idx+d+photos.length)%photos.length;imgs[idx]&&imgs[idx].classList.add('on');dots[idx]&&dots[idx].classList.add('on');
+  $('showCount').textContent=`${idx+1} / ${photos.length}`;disarm();restartTimer()}
+function restartTimer(){clearInterval(showTimer);if(playing&&photos.length>1&&!$('show').hidden)showTimer=setInterval(()=>go(1),4000)}
+$('photos').onclick=openShow;$('closeShow').onclick=closeShow;$('addPhotos').onclick=()=>$('fileIn').click();
+$('playBtn').onclick=()=>{playing=!playing;$('playBtn').textContent=playing?'Pause':'Abspielen';restartTimer()};
+$('delPhoto').onclick=async()=>{if(!delArm){delArm=true;$('delPhoto').textContent='Wirklich entfernen?';return}
+  const p=photos[idx];if(!p)return;try{if(typeof p.id==='number')await tx('readwrite',s=>s.delete(p.id))}catch(e){}
+  URL.revokeObjectURL(p.url);photos.splice(idx,1);if(idx>=photos.length)idx=Math.max(0,photos.length-1);updateBadge();drawShow()};
+let sx=null,swiped=false;$('stage').addEventListener('pointerdown',e=>{sx=e.clientX;swiped=false});
+$('stage').addEventListener('pointerup',e=>{if(sx===null)return;const dx=e.clientX-sx;sx=null;
+  if(Math.abs(dx)>50){swiped=true;go(dx<0?1:-1);setTimeout(()=>{swiped=false},50)}});
+loadPhotos();
+
+document.addEventListener('keydown',e=>{
+  if(!$('show').hidden){if(e.key==='Escape')closeShow();else if(e.key==='ArrowRight')go(1);else if(e.key==='ArrowLeft')go(-1);return}
+  if(!$('overlay').hidden)return;const k=e.key;
+  if(/^[1-9]$/.test(k))input(+k);
+  else if(k==='Backspace'||k==='Delete'||k==='0')erase();
+  else if(k==='n'||k==='N'){S.noteMode=!S.noteMode;render()}
+  else if((e.ctrlKey||e.metaKey)&&k==='z')undo();
+  else if(k.startsWith('Arrow')){e.preventDefault();let i=S.sel<0?40:S.sel,r=i/9|0,c=i%9;
+    if(k==='ArrowUp')r=(r+8)%9;if(k==='ArrowDown')r=(r+1)%9;if(k==='ArrowLeft')c=(c+8)%9;if(k==='ArrowRight')c=(c+1)%9;select(r*9+c)}});
+
+const saved=load();
+if(saved&&saved.sol&&saved.val){S=saved;start();if(S.over)endScreen()}
+else{newGame('mittel');S.sel=40;render()}
+})();
+</script>
+
+<script>
+if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
+</script>
+</body>
+</html>
