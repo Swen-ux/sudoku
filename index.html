@@ -170,6 +170,29 @@ button:active{transform:scale(.96)}
 .rtxt{display:flex;justify-content:space-between;align-items:baseline;gap:4px 10px;flex-wrap:wrap;min-width:0}
 .rank .bar{grid-column:1/-1;height:5px}
 .rtxt .pts{white-space:normal;text-align:right}
+/* Fokus-Modus: nur das Spielfeld */
+.iconbtn{width:34px;height:34px;border-radius:99px;border:1px solid var(--line);background:transparent;color:var(--ink);display:grid;place-items:center;cursor:pointer;flex:none;align-self:center}
+.iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+header .stats{align-items:center}
+body.focus .app>.panel,body.focus .foot{display:none}
+.app{min-height:100%;box-sizing:border-box}
+body.focus .app{justify-content:center}
+.fbar{position:fixed;z-index:6;top:calc(env(safe-area-inset-top,0px) + 10px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:12px;
+  padding:5px 5px 5px 14px;border-radius:99px;background:color-mix(in srgb,var(--paper) 72%,transparent);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+  font-family:var(--mono);font-size:.8rem;color:var(--ink);font-variant-numeric:tabular-nums;box-shadow:0 4px 18px rgb(0 0 0/.25);white-space:nowrap}
+.fbar button{font:500 .78rem var(--display);padding:6px 12px;border-radius:99px;border:none;background:var(--ink);color:var(--paper);cursor:pointer}
+body:not(.focus) .fbar{display:none}
+.fbar button.lite{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.fbar{gap:8px}
+body:not(.has-bg) #focusBtn{display:none}
+.picker{position:absolute;z-index:4;display:grid;grid-template-columns:repeat(3,48px);gap:5px;padding:7px;border-radius:16px;
+  background:color-mix(in srgb,var(--paper) 90%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);box-shadow:0 12px 34px rgb(0 0 0/.35)}
+.picker button{height:46px;border:none;border-radius:11px;background:var(--btn);color:var(--user);font:500 1.35rem var(--mono);cursor:pointer;padding:0}
+.picker button.done{opacity:.25;pointer-events:none}
+.picker.notemode .num{color:var(--muted);font-size:1rem}
+.picker .fn{font:500 .7rem var(--display);color:var(--ink);height:36px;display:flex;align-items:center;justify-content:center;gap:4px}
+.picker .fn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.picker .fn.on{background:var(--accent);color:#fff}
 .slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .slot{position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:6px;font:500 .64rem/1.3 var(--display);color:var(--muted);text-align:center;cursor:pointer;min-width:0}
 .slot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -220,7 +243,7 @@ button:active{transform:scale(.96)}
   <div class="panel">
   <header>
     <h1>Sudoku<span>.</span></h1>
-    <div class="stats"><span>Fehler <b id="mist">0/3</b></span><span><b id="time">00:00</b></span></div>
+    <div class="stats"><span>Fehler <b id="mist">0/3</b></span><span><b id="time">00:00</b></span><button class="iconbtn" id="focusBtn" aria-label="Fokus-Modus: nur das Spielfeld zeigen" title="Nur Spielfeld"><svg viewBox="0 0 24 24"><path d="M4 9V5h4M20 9V5h-4M4 15v4h4M20 15v4h-4"/></svg></button></div>
   </header>
   <button class="rank" id="rankBtn" aria-label="Galerie öffnen"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><rect x="6.5" y="7.5" width="11" height="9" rx="1"/></svg><span class="rtxt"><span class="rname" id="rName">Bilderrahmen 1 von 8</span><span class="pts" id="rPts"></span></span><span class="bar"><i id="rBar"></i></span></button>
   <div class="diff" role="group" aria-label="Schwierigkeit">
@@ -233,6 +256,7 @@ button:active{transform:scale(.96)}
   <div class="board-wrap">
     <div class="board" id="board" role="grid" aria-label="Sudoku-Gitter"></div>
     <div class="overlay" id="overlay" hidden></div>
+    <div class="picker" id="picker" hidden></div>
   </div>
   <div class="panel">
   <div class="tools">
@@ -244,6 +268,7 @@ button:active{transform:scale(.96)}
   </div>
   <div class="pad" id="pad"></div>
   </div>
+  <div class="fbar" id="fbar"><span id="fMist">0/3 Fehler</span><span id="fTime">00:00</span><button id="fGal" class="lite">Galerie</button><button id="fExit">Alles zeigen</button></div>
   <p class="foot">Tastatur: Pfeile, 1–9, Entf, N für Notizen</p>
 </div>
 
@@ -282,7 +307,7 @@ const load=()=>{try{return JSON.parse(localStorage.getItem('sudoku-v1'))}catch(e
 function newGame(d){const{puz,sol}=generate(d);
   S={d,puz,sol,val:puz.slice(),notes:Array.from({length:81},()=>[]),sel:-1,mist:0,hints:3,time:0,hist:[],noteMode:false,over:null};
   start()}
-function start(){clearInterval(timerId);timerId=setInterval(()=>{if(!S.over&&!document.hidden){S.time++;$('time').textContent=fmt(S.time);if(S.time%5===0)save()}},1000);
+function start(){clearInterval(timerId);timerId=setInterval(()=>{if(!S.over&&!document.hidden){S.time++;$('time').textContent=$('fTime').textContent=fmt(S.time);if(S.time%5===0)save()}},1000);
   $('overlay').hidden=true;render();save()}
 const fmt=t=>String(t/60|0).padStart(2,'0')+':'+String(t%60).padStart(2,'0');
 
@@ -301,9 +326,40 @@ function render(){const sv=S.sel>=0?S.val[S.sel]:0;const pr=S.sel>=0?new Set(pee
   pad.classList.toggle('notemode',S.noteMode);
   $('notes').classList.toggle('on',S.noteMode);$('noteBadge').textContent=S.noteMode?'AN':'AUS';
   $('hintBadge').textContent=S.hints;$('mist').textContent=S.mist+'/3';$('time').textContent=fmt(S.time);
-  document.querySelectorAll('.diff button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.d===S.d))}
+  document.querySelectorAll('.diff button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.d===S.d));
+  $('fMist').textContent=S.mist+'/3 Fehler';$('fTime').textContent=fmt(S.time);applyFocus();if(!$('picker').hidden)drawPicker()}
 
-function select(i){if(S.over)return;S.sel=i;render()}
+// ---------- Fokus-Modus ----------
+const focusOn=()=>typeof P!=='undefined'&&P.focus!==false;
+function applyFocus(){const f=focusOn()&&!S.over&&document.body.classList.contains('has-bg');document.body.classList.toggle('focus',f);if(!f)hidePicker()}
+function hidePicker(){$('picker').hidden=true}
+const PK_NOTE='<svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+const PK_DEL='<svg viewBox="0 0 24 24"><path d="M20 20H8l-5-5 10-10 8 8-7 7"/></svg>';
+const PK_UNDO='<svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h11a5 5 0 0 1 0 10h-3"/></svg>';
+function drawPicker(){const pk=$('picker'),i=S.sel;
+  if(i<0||S.puz[i]||S.val[i]===S.sol[i]){hidePicker();return}
+  const cnt=Array(10).fill(0);S.val.forEach((v,j)=>{if(v&&v===S.sol[j])cnt[v]++});
+  pk.classList.toggle('notemode',S.noteMode);
+  pk.innerHTML=[1,2,3,4,5,6,7,8,9].map(v=>`<button class="num${cnt[v]===9?' done':''}" data-v="${v}" aria-label="${v} eintragen">${v}</button>`).join('')+
+    `<button class="fn${S.noteMode?' on':''}" data-f="note">Notiz</button><button class="fn" data-f="del">Löschen</button><button class="fn" data-f="undo">Zurück</button>`}
+function showPicker(i){const pk=$('picker'),wrap=pk.parentElement;drawPicker();if(pk.hidden&&(S.puz[i]||S.val[i]===S.sol[i]))return;pk.hidden=false;
+  if(S.puz[i]||S.val[i]===S.sol[i]){hidePicker();return}
+  const wr=wrap.getBoundingClientRect(),cr=board.childNodes[i].getBoundingClientRect(),pw=pk.offsetWidth,ph=pk.offsetHeight;
+  let left=cr.left-wr.left+cr.width/2-pw/2;left=Math.max(0,Math.min(wr.width-pw,left));
+  let top=cr.bottom-wr.top+6;if(cr.bottom+6+ph>innerHeight-8)top=cr.top-wr.top-ph-6;
+  pk.style.left=left+'px';pk.style.top=Math.max(-wr.top+8,top)+'px'}
+$('picker').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.v){input(+b.dataset.v);if(!S.over&&S.sel>=0&&S.val[S.sel]===S.sol[S.sel])hidePicker();return}
+  if(b.dataset.f==='note'){S.noteMode=!S.noteMode;render();save()}
+  else if(b.dataset.f==='del')erase();
+  else if(b.dataset.f==='undo')undo()});
+document.addEventListener('pointerdown',e=>{if($('picker').hidden)return;if(e.target.closest('#picker,.cell'))return;hidePicker()});
+$('focusBtn').onclick=()=>{P.focus=true;saveP();applyFocus()};
+$('fGal').onclick=()=>openGal();
+$('fExit').onclick=()=>{P.focus=false;saveP();applyFocus()};
+
+function select(i){if(S.over)return;const again=S.sel===i&&!$('picker').hidden;S.sel=i;render();
+  if(document.body.classList.contains('focus')){if(again)hidePicker();else showPicker(i)}}
 function push(){S.hist.push({val:S.val.slice(),notes:S.notes.map(n=>n.slice())});if(S.hist.length>200)S.hist.shift()}
 function pop(i){const el=board.childNodes[i];el.classList.remove('pop');void el.offsetWidth;el.classList.add('pop')}
 
@@ -489,7 +545,7 @@ let bgTimer,bgIdx=0;
 const isFull=()=>slotsOf(loadR())>=MAXF;
 function activeId(vis){const a=vis.find(p=>p.id===P.bgId);return a?a.id:(vis[0]&&vis[0].id)}
 function renderBg(){const bg=$('bg');clearInterval(bgTimer);const vis=photos.slice(0,slotsOf(loadR()));
-  document.body.classList.toggle('has-bg',vis.length>0);
+  document.body.classList.toggle('has-bg',vis.length>0);if(typeof S!=='undefined'&&S)applyFocus();
   if(!vis.length){bg.innerHTML='';return}
   const slide=isFull()&&P.show&&vis.length>1;
   const list=slide?vis:[vis.find(p=>p.id===activeId(vis))];
