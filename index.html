@@ -170,6 +170,10 @@ button:active{transform:scale(.96)}
 .rtxt{display:flex;justify-content:space-between;align-items:baseline;gap:4px 10px;flex-wrap:wrap;min-width:0}
 .rank .bar{grid-column:1/-1;height:5px}
 .rtxt .pts{white-space:normal;text-align:right}
+.cheer{position:fixed;z-index:65;left:50%;top:calc(env(safe-area-inset-top,0px) + 7%);transform:translate(-50%,0) scale(.6);opacity:0;pointer-events:none;
+  padding:14px 24px;border-radius:20px;background:var(--accent);color:#fff;font:700 clamp(1.3rem,6vw,1.8rem) var(--display);letter-spacing:-.01em;
+  width:max-content;max-width:calc(100vw - 32px);text-align:center;text-wrap:balance;box-shadow:0 12px 36px rgb(0 0 0/.35);transition:opacity .35s ease,transform .45s cubic-bezier(.2,1.6,.4,1)}
+.cheer.on{opacity:1;transform:translate(-50%,0) scale(1) rotate(-2deg)}
 /* Fokus-Modus: nur das Spielfeld */
 .iconbtn{width:34px;height:34px;border-radius:99px;border:1px solid var(--line);background:transparent;color:var(--ink);display:grid;place-items:center;cursor:pointer;flex:none;align-self:center}
 .iconbtn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -276,6 +280,7 @@ body:not(.has-bg) #focusBtn{display:none}
 <input type="file" id="fileIn" accept="image/*" hidden>
 <div class="sheet" id="sheet" hidden role="dialog" aria-label="Logbuch"><div class="sheet-in" id="sheetIn"></div></div>
 <canvas id="fx" aria-hidden="true"></canvas>
+<div class="cheer" id="cheer" role="status" aria-live="polite"></div>
 
 <script>
 (()=>{
@@ -368,9 +373,16 @@ function input(v){const i=S.sel;if(S.over||i<0||S.puz[i])return;if(S.val[i]===S.
   if(S.noteMode){S.val[i]=0;const n=S.notes[i];const k=n.indexOf(v);k<0?n.push(v):n.splice(k,1)}
   else{if(S.val[i]===v){S.val[i]=0}else{S.val[i]=v;S.notes[i]=[];
       if(v!==S.sol[i]){S.mist++;if(S.mist>=3){S.over='lost'}}
-      else{peersOf[i].forEach(p=>{const n=S.notes[p],k=n.indexOf(v);if(k>=0)n.splice(k,1)});pop(i);
+      else{peersOf[i].forEach(p=>{const n=S.notes[p],k=n.indexOf(v);if(k>=0)n.splice(k,1)});pop(i);cheerTick();
         if(S.val.every((x,j)=>x===S.sol[j]))S.over='won'}}}
   render();save();if(S.over)endScreen()}
+// Anfeuern nach ein paar richtigen Zahlen
+let cheerLeft=4+Math.floor(Math.random()*3),cheerT,cheerLast=-1;
+const CHEERS=['Du schaffst das Muttili! ♥','Go Wacki Go Wacki!','Ein rollender Stein setzt kein Moos an!','Sudoku hilft gegen Alzheimer!'];
+function cheerTick(){if(--cheerLeft>0)return;cheerLeft=5+Math.floor(Math.random()*4);
+  if(S.val.every((x,j)=>x===S.sol[j]))return;let k;do{k=Math.floor(Math.random()*CHEERS.length)}while(k===cheerLast&&CHEERS.length>1);cheerLast=k;
+  const c=$('cheer');c.textContent=CHEERS[k];
+  c.classList.add('on');clearTimeout(cheerT);cheerT=setTimeout(()=>c.classList.remove('on'),2600)}
 function erase(){const i=S.sel;if(S.over||i<0||S.puz[i]||S.val[i]===S.sol[i])return;push();S.val[i]=0;S.notes[i]=[];render();save()}
 function undo(){if(S.over||!S.hist.length)return;const h=S.hist.pop();S.val=h.val;S.notes=h.notes;render();save()}
 function hint(){if(S.over||!S.hints)return;let i=S.sel;
