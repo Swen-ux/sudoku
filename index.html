@@ -47,12 +47,14 @@ body{background:var(--bg);color:var(--ink);font-family:var(--display);
 .bg{position:fixed;inset:0;z-index:0;overflow:hidden;background:var(--bg);pointer-events:none}
 .bg img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.04);transition:opacity 1.6s ease,transform 12s linear}
 .bg img.on{opacity:1;transform:scale(1.12)}
-body.has-bg{--a:var(--glass,72%);background:#000}
+body.has-bg{--a:var(--glass,55%);background:#000}
 body.has-bg .panel{padding:12px;background:color-mix(in srgb,var(--paper) var(--a),transparent);
   -webkit-backdrop-filter:blur(10px) saturate(1.2);backdrop-filter:blur(10px) saturate(1.2);box-shadow:0 6px 24px rgb(0 0 0/.25)}
 body.has-bg .board{background:color-mix(in srgb,var(--paper) var(--a),transparent);box-shadow:0 8px 30px rgb(0 0 0/.3)}
-body.has-bg .cell.peer{background:color-mix(in srgb,var(--peer) 70%,transparent)}
-body.has-bg .cell.same{background:color-mix(in srgb,var(--same) 80%,transparent)}
+body.has-bg .cell.peer{background:color-mix(in srgb,var(--peer) 35%,transparent)}
+body.has-bg .cell{text-shadow:0 0 4px var(--paper),0 0 2px var(--paper)}
+body.has-bg .cell.sel{background:color-mix(in srgb,var(--sel) 55%,transparent)}
+body.has-bg .cell.same{background:transparent}
 body.has-bg .pad button{background:color-mix(in srgb,var(--btn) 75%,transparent)}
 body.has-bg .foot{display:none}
 .glassrow{display:flex;align-items:center;gap:10px;padding:0 16px 14px;font-family:var(--mono);font-size:.8rem;color:#9fb0c2}
@@ -76,14 +78,15 @@ h1 span{color:var(--accent)}
 .cell:nth-child(n+73){border-bottom:none}
 .cell.given{color:var(--given);font-weight:500}
 .cell.peer{background:var(--peer)}
-.cell.same{background:var(--same)}
-.cell.sel{background:var(--sel);box-shadow:inset 0 0 0 2px var(--user)}
+.cell.same:not(.err){color:var(--accent)!important;font-weight:700}
+.cell.sel{background:var(--sel);box-shadow:inset 0 0 0 2px var(--accent)}
+body.has-bg .cell.same.sel{background:color-mix(in srgb,var(--sel) 55%,transparent)}
 .cell.err{color:var(--err);background:var(--err-bg)}
 .cell.pop{animation:pop .25s ease}
 @keyframes pop{50%{transform:scale(1.18)}}
 .notes{position:absolute;inset:2px;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);font-size:clamp(.5rem,2.2vw,.72rem);color:var(--muted)}
 .notes span{display:flex;align-items:center;justify-content:center}
-.notes span.hl{color:var(--user);font-weight:500}
+.notes span.hl{color:var(--accent);font-weight:700}
 .tools{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .tool{display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;border:none;background:transparent;color:var(--ink);font:500 .75rem var(--display);cursor:pointer;border-radius:10px}
 .tool svg{width:24px;height:24px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -689,7 +692,7 @@ function drawGal(){const R=loadR(),n=slotsOf(R),full=n>=MAXF,vis=photos.slice(0,
     :`<div class="lockcard">${LOCK}<span>Wird frei, wenn alle ${MAXF} Rahmen offen sind. Dann blenden deine Bilder im Hintergrund nacheinander ineinander.</span></div>`}</section>
   <section class="card"><h3>Musik</h3><div class="tracks">${tracksHtml}</div>
     ${unlockedTracks().length?`<div class="range"><span>leise</span><input type="range" id="vol" min="0" max="1" step=".05" value="${P.vol}"><span>laut</span></div>`:''}</section>
-  <section class="card"><h3>Spielfeld</h3><div class="range" style="margin-top:0"><span>durchsichtig</span><input type="range" id="glass" min="35" max="95" step="5" value="${P.glass||70}"><span>deckend</span></div></section>
+  <section class="card"><h3>Spielfeld</h3><div class="range" style="margin-top:0"><span>durchsichtig</span><input type="range" id="glass" min="20" max="95" step="5" value="${P.glass||55}"><span>deckend</span></div></section>
   <p class="hintp">Deine Fotos bleiben nur auf diesem Gerät gespeichert und werden nirgends hochgeladen.</p>`}
 $('galIn').addEventListener('click',async e=>{const t=e.target.closest('button');if(!t)return;
   if(t.id==='galClose')return closeGal();
